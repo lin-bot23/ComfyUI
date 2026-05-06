@@ -5,6 +5,20 @@ from concurrent.futures import ThreadPoolExecutor
 import requests
 import pytest
 
+from app.assets.api.schemas_out import Asset, AssetCreated
+
+
+def test_asset_created_inherits_hash_field():
+    """AssetCreated must inherit `hash` from Asset so POST /api/assets responses emit it.
+
+    Schema-level guard: integration tests cover the wire shape, but inheritance
+    drift (e.g. AssetCreated ever being redefined to no longer extend Asset)
+    would silently drop `hash` from a major endpoint without this check.
+    """
+    assert "hash" in Asset.model_fields
+    assert "hash" in AssetCreated.model_fields
+    assert AssetCreated.model_fields["hash"].annotation == Asset.model_fields["hash"].annotation
+
 
 def test_upload_ok_duplicate_reference(http: requests.Session, api_base: str, make_asset_bytes):
     name = "dup_a.safetensors"

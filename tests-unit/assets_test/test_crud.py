@@ -294,8 +294,9 @@ def test_metadata_filename_is_set_for_seed_asset_without_hash(
     assert r1.status_code == 200, body
     matches = [a for a in body.get("assets", []) if a.get("name") == name]
     assert matches, "Seed asset should be visible after sync"
-    assert matches[0].get("asset_hash") is None  # still a seed
-    assert matches[0].get("hash") is None  # still a seed
+    # Seed assets have no hash; exclude_none drops both keys from the response
+    assert "asset_hash" not in matches[0]
+    assert "hash" not in matches[0]
     aid = matches[0]["id"]
 
     r2 = http.get(f"{api_base}/api/assets/{aid}", timeout=120)
