@@ -1808,6 +1808,63 @@ paths:
         "404":
           description: Asset not found
 
+  /api/assets/{id}/preview:
+    put:
+      operationId: setAssetPreview
+      tags: [assets]
+      summary: Set preview asset
+      description: Sets the preview asset for an existing asset. The preview_id must reference an existing asset.
+      x-feature-gate: enable-assets
+      parameters:
+        - name: id
+          in: path
+          description: The asset ID.
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - preview_id
+              properties:
+                preview_id:
+                  type: string
+                  format: uuid
+                  description: ID of the asset to use as the preview
+      responses:
+        "200":
+          description: Preview set successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Asset"
+        "404":
+          description: Asset not found
+    delete:
+      operationId: clearAssetPreview
+      tags: [assets]
+      summary: Clear preview asset
+      description: Clears the preview asset link for an existing asset.
+      x-feature-gate: enable-assets
+      parameters:
+        - name: id
+          in: path
+          description: The asset ID.
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Preview cleared
+        "404":
+          description: Asset not found
+
   /api/assets/{id}/tags:
     post:
       operationId: addAssetTags

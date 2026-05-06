@@ -36,6 +36,7 @@ from app.assets.services import (
     list_tags,
     remove_tags,
     resolve_asset_for_download,
+    set_asset_preview,
     update_asset_metadata,
     upload_from_temp_path,
 )
@@ -542,6 +543,70 @@ async def delete_asset_route(request: web.Request) -> web.Response:
         return _build_error_response(
             404, "ASSET_NOT_FOUND", f"AssetReference {reference_id} not found."
         )
+    return web.Response(status=204)
+
+
+@ROUTES.put(f"/api/assets/{{id:{UUID_RE}}}/preview")
+@_require_assets_feature_enabled
+async def set_asset_preview_route(request: web.Request) -> web.Response:
+    reference_id = str(uuid.UUID(request.match_info["id"]))
+    try:
+        payload = await request.json()
+    except Exception:
+        return _build_error_response(
+            400, "INVALID_JSON", "Request body must be valid JSON."
+        )
+
+    preview_id = payload.get("preview_id")
+    if not preview_id:
+        return _build_error_response(
+            400, "INVALID_BODY", "preview_id is required."
+        )
+
+    try:
+        result = set_asset_preview(
+            reference_id=reference_id,
+            preview_reference_id=preview_id,
+            owner_id=USER_MANAGER.get_request_user_id(request),
+        )
+        response_payload = _build_asset_response(result)
+    except PermissionError as pe:
+        return _build_error_response(403, "FORBIDDEN", str(pe), {"id": reference_id})
+    except ValueError as ve:
+        return _build_error_response(
+            404, "ASSET_NOT_FOUND", str(ve), {"id": reference_id}
+        )
+    except Exception:
+        logging.exception(
+            "set_asset_preview failed for reference_id=%s",
+            reference_id,
+        )
+        return _build_error_response(500, "INTERNAL", "Unexpected server error.")
+    return web.json_response(response_payload.model_dump(mode="json", exclude_none=True), status=200)
+
+
+@ROUTES.delete(f"/api/assets/{{id:{UUID_RE}}}/preview")
+@_require_assets_feature_enabled
+async def clear_asset_preview_route(request: web.Request) -> web.Response:
+    reference_id = str(uuid.UUID(request.match_info["id"]))
+    try:
+        result = set_asset_preview(
+            reference_id=reference_id,
+            preview_reference_id=None,
+            owner_id=USER_MANAGER.get_request_user_id(request),
+        )
+    except PermissionError as pe:
+        return _build_error_response(403, "FORBIDDEN", str(pe), {"id": reference_id})
+    except ValueError as ve:
+        return _build_error_response(
+            404, "ASSET_NOT_FOUND", str(ve), {"id": reference_id}
+        )
+    except Exception:
+        logging.exception(
+            "clear_asset_preview failed for reference_id=%s",
+            reference_id,
+        )
+        return _build_error_response(500, "INTERNAL", "Unexpected server error.")
     return web.Response(status=204)
 
 
